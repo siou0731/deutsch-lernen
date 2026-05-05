@@ -92,6 +92,15 @@
   .chk:hover{border-color:var(--accent2);color:var(--accent2);}
   .word-card.done .chk{background:var(--accent2);border-color:var(--accent2);color:#000;}
 
+  /* Flip card - exam mode: Chinese first, German answer after click */
+  .flash-card{flex:1;min-width:0;perspective:1000px;cursor:pointer;}
+  .flash-inner{position:relative;min-height:112px;transform-style:preserve-3d;transition:transform .35s ease;}
+  .flash-card.flipped .flash-inner{transform:rotateY(180deg);}
+  .flash-face{position:absolute;inset:0;backface-visibility:hidden;background:var(--surface);}
+  .flash-back{transform:rotateY(180deg);}
+  .flash-hint{font-size:11px;color:var(--muted);margin-top:8px;}
+  .word-card.done .flash-card{pointer-events:none;}
+
   /* Form */
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
   .form-group.full{grid-column:1/-1;}
@@ -548,23 +557,50 @@ function cardHTML(w, i, type, isDone) {
   const tag = type === 'new' ? '<span class="tag tag-n">Neu</span>' : '<span class="tag tag-r">Wdh.</span>';
   const art = w.artikel ? `<span class="wart">${w.artikel}</span>` : '';
   const pos = w.pos ? `<span style="font-size:11px;color:var(--muted)">${w.pos}</span>` : '';
-  const ex = w.example ? `<div class="wex">${w.example}${w.exampleZh ? ' | ' + w.exampleZh : ''}</div>` : '';
+  const exDe = w.example ? `<div class="wex">${w.example}</div>` : '';
+  const exZh = w.exampleZh ? `<div class="wex">${w.exampleZh}</div>` : '';
   const rating = type === 'rev' ? `<div class="rg">
-    <button class="rb" onclick="rateWord('${w.id}',0)" title="完全不記得">0</button>
-    <button class="rb" onclick="rateWord('${w.id}',1)" title="幾乎不記得">1</button>
-    <button class="rb" onclick="rateWord('${w.id}',2)" title="很難想起">2</button>
-    <button class="rb" onclick="rateWord('${w.id}',3)" title="勉強記得">3</button>
-    <button class="rb" onclick="rateWord('${w.id}',4)" title="記得有遲疑">4</button>
-    <button class="rb" onclick="rateWord('${w.id}',5)" title="完全記得">5</button>
+    <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',0)" title="完全不記得">0</button>
+    <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',1)" title="幾乎不記得">1</button>
+    <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',2)" title="很難想起">2</button>
+    <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',3)" title="勉強記得">3</button>
+    <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',4)" title="記得有遲疑">4</button>
+    <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',5)" title="完全記得">5</button>
   </div>` : '';
+
   return `<div class="word-card${isDone ? ' done' : ''}" id="card-${w.id}">
     <span class="widx">${String(i).padStart(2, '0')}</span>
-    <div class="winfo">
-      <div class="wtop"><span class="wde">${w.de}</span>${art}${pos}${tag}</div>
-      <div class="wzh">${w.zh}</div>${ex}
+
+    <div class="flash-card" onclick="flipCard('${w.id}')">
+      <div class="flash-inner">
+
+        <div class="flash-face flash-front">
+          <div class="winfo">
+            <div class="wtop"><span class="wzh">${w.zh}</span>${tag}</div>
+            ${exZh}
+            <div class="flash-hint">先想德文，點一下看答案</div>
+          </div>
+        </div>
+
+        <div class="flash-face flash-back">
+          <div class="winfo">
+            <div class="wtop"><span class="wde">${w.de}</span>${art}${pos}${tag}</div>
+            ${exDe}
+            <div class="flash-hint">點一下回中文</div>
+          </div>
+        </div>
+
+      </div>
     </div>
-    <div class="wactions">${rating}<button class="chk" onclick="toggleDone('${w.id}')">✓</button></div>
+
+    <div class="wactions">${rating}<button class="chk" onclick="event.stopPropagation(); toggleDone('${w.id}')">✓</button></div>
   </div>`;
+}
+
+function flipCard(id) {
+  const card = document.querySelector(`#card-${id} .flash-card`);
+  if (!card) return;
+  card.classList.toggle('flipped');
 }
 
 function rateWord(id, q) {
