@@ -93,14 +93,42 @@
   .word-card.done .chk{background:var(--accent2);border-color:var(--accent2);color:#000;}
 
 
-  /* Exam mode cards */
-  .answer-box{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
-  .answer-box.show{display:block;}
-  .show-answer-btn{margin-top:10px;padding:7px 14px;font-size:13px;}
+  /* Exam flip cards */
+  .exam-card{flex:1;min-width:0;perspective:1000px;}
+  .exam-inner{position:relative;min-height:132px;transform-style:preserve-3d;transition:transform .45s ease;}
+  .word-card.answer-shown .exam-inner{transform:rotateY(180deg);}
+  .exam-face{position:absolute;inset:0;backface-visibility:hidden;background:var(--surface);border-radius:10px;}
+  .exam-front,.exam-back{display:flex;flex-direction:column;justify-content:flex-start;}
+  .exam-back{transform:rotateY(180deg);}
+  .show-answer-btn{margin-top:10px;padding:7px 14px;font-size:13px;width:max-content;}
   .exam-tip{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;}
   .word-card .rg{display:none;}
   .word-card.answer-shown .rg{display:flex;}
   .word-card.answer-shown .show-answer-btn{display:none;}
+  .word-card.done .exam-card{pointer-events:none;}
+
+  /* Word detail modal */
+  .word-link{cursor:pointer;}
+  .word-link:hover{text-decoration:underline;}
+  .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:1000;padding:1.5rem;}
+  .modal-mask.show{display:flex;}
+  .word-modal{width:min(560px,100%);background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:1.5rem;box-shadow:0 20px 70px rgba(0,0,0,.45);}
+  .modal-top{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem;}
+  .modal-close{background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:8px;padding:5px 10px;cursor:pointer;}
+  .modal-close:hover{color:var(--text);border-color:var(--accent);}
+  .modal-de{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:var(--accent);}
+  .modal-zh{font-size:18px;margin-top:8px;line-height:1.6;}
+  .modal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:1rem;}
+  .modal-cell{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+  .modal-label{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;}
+  .modal-val{font-size:14px;color:var(--text);}
+  .modal-example{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;}
+  .edit-form{display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);}
+  .edit-form.show{display:block;}
+  .view-area.hide{display:none;}
+  .modal-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-edit-grid .full{grid-column:1/-1;}
 
   /* Form */
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
@@ -342,6 +370,60 @@
   </div>
 </div>
 
+
+<div class="modal-mask" id="word-modal" onclick="closeWordDetail(event)">
+  <div class="word-modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div>
+        <div class="modal-de" id="modal-de"></div>
+        <div class="modal-zh" id="modal-zh"></div>
+      </div>
+      <button class="modal-close" onclick="closeWordDetail()">關閉</button>
+    </div>
+
+    <div class="view-area" id="modal-view-area">
+      <div class="modal-grid" id="modal-grid"></div>
+      <div class="modal-example" id="modal-example"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="startEditWord()">編輯單字</button>
+      </div>
+    </div>
+
+    <div class="edit-form" id="modal-edit-form">
+      <div class="modal-edit-grid">
+        <div class="form-group"><label>德文單字 *</label><input id="e-de"></div>
+        <div class="form-group"><label>中文意思 *</label><input id="e-zh"></div>
+        <div class="form-group"><label>冠詞</label>
+          <select id="e-art">
+            <option value="">— 非名詞 —</option>
+            <option value="der">der（陽性）</option>
+            <option value="die">die（陰性）</option>
+            <option value="das">das（中性）</option>
+            <option value="die (Pl.)">die（複數）</option>
+          </select>
+        </div>
+        <div class="form-group"><label>詞性</label>
+          <select id="e-pos">
+            <option value="">（選填）</option>
+            <option value="v.">v. 動詞</option>
+            <option value="n.">n. 名詞</option>
+            <option value="adj.">adj. 形容詞</option>
+            <option value="adv.">adv. 副詞</option>
+            <option value="konj.">konj. 連接詞</option>
+            <option value="präp.">präp. 介係詞</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>例句</label><textarea id="e-ex"></textarea></div>
+        <div class="form-group full"><label>例句中文翻譯</label><input id="e-exzh"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="cancelEditWord()">取消</button>
+        <button class="btn btn-primary" onclick="saveWordEdit()">儲存修改</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -560,7 +642,6 @@ function cardHTML(w, i, type, isDone) {
   const pos = w.pos ? `<span style="font-size:11px;color:var(--muted)">${w.pos}</span>` : '';
   const exDe = w.example ? `<div class="wex">${w.example}</div>` : '';
   const exZh = w.exampleZh ? `<div class="wex">${w.exampleZh}</div>` : '';
-
   const rating = type === 'rev' ? `<div class="rg">
     <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',0)" title="完全不記得">0</button>
     <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',1)" title="幾乎不記得">1</button>
@@ -569,64 +650,56 @@ function cardHTML(w, i, type, isDone) {
     <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',4)" title="記得有遲疑">4</button>
     <button class="rb" onclick="event.stopPropagation(); rateWord('${w.id}',5)" title="完全記得">5</button>
   </div>` : '';
-
   return `<div class="word-card${isDone ? ' done' : ''}" id="card-${w.id}">
     <span class="widx">${String(i).padStart(2, '0')}</span>
 
-    <div class="winfo">
-      <div class="wtop">
-        <span class="wzh">${w.zh}</span>${tag}
-      </div>
-      ${exZh}
-      <div class="exam-tip">先在腦中講出德文，再按「顯示答案」。不要偷看，腦袋不是監視器但會偷懶。</div>
-
-      <button class="btn btn-secondary show-answer-btn" onclick="event.stopPropagation(); showAnswer('${w.id}')">
-        顯示答案
-      </button>
-
-      <div class="answer-box" id="ans-${w.id}">
-        <div class="wtop">
-          <span class="wde">${w.de}</span>${art}${pos}
+    <div class="exam-card">
+      <div class="exam-inner">
+        <div class="exam-face exam-front">
+          <div class="wtop"><span class="wzh">${w.zh}</span>${tag}</div>
+          ${exZh}
+          <div class="exam-tip">先在腦中講出德文，再按「顯示答案」。</div>
+          <button class="btn btn-secondary show-answer-btn" onclick="event.stopPropagation(); showAnswer('${w.id}')">顯示答案</button>
         </div>
-        ${exDe}
-        <div class="exam-tip">看完答案後再評分：0 = 爆炸，5 = 秒答。</div>
+
+        <div class="exam-face exam-back">
+          <div class="wtop"><span class="wde">${w.de}</span>${art}${pos}${tag}</div>
+          ${exDe}
+          <div class="exam-tip">看完答案後再評分：0 = 完全炸裂，5 = 秒答。</div>
+        </div>
       </div>
     </div>
 
-    <div class="wactions">
-      ${rating}
-      <button class="chk" onclick="event.stopPropagation(); toggleDone('${w.id}')">✓</button>
-    </div>
+    <div class="wactions">${rating}<button class="chk" onclick="event.stopPropagation(); toggleDone('${w.id}')">✓</button></div>
   </div>`;
 }
 
 function showAnswer(id){
   const card = document.getElementById('card-' + id);
-  const ans = document.getElementById('ans-' + id);
-  if(!card || !ans) return;
-  ans.classList.add('show');
+  if(!card) return;
   card.classList.add('answer-shown');
 }
 
 function getActiveReviewCard(){
-  return document.querySelector('.word-card:not(.done)');
+  return document.querySelector('#today-content .word-card:not(.done)');
 }
 
 document.addEventListener('keydown', function(e){
-  const card = getActiveReviewCard();
-  if(!card) return;
-
-  if(e.code === 'Space' || e.key === 'Enter'){
-    e.preventDefault();
-    const id = card.id.replace('card-', '');
-    showAnswer(id);
+  const modal = document.getElementById('word-modal');
+  if(modal && modal.classList.contains('show')){
+    if(e.key === 'Escape') closeWordDetail();
     return;
   }
-
+  const card = getActiveReviewCard();
+  if(!card) return;
+  if(e.code === 'Space' || e.key === 'Enter'){
+    e.preventDefault();
+    showAnswer(card.id.replace('card-', ''));
+    return;
+  }
   if(/^[0-5]$/.test(e.key) && card.classList.contains('answer-shown')){
     e.preventDefault();
-    const id = card.id.replace('card-', '');
-    rateWord(id, Number(e.key));
+    rateWord(card.id.replace('card-', ''), Number(e.key));
   }
 });
 
@@ -690,16 +763,100 @@ function renderList() {
     const ec = ef >= 2.3 ? 'ef-g' : ef >= 1.8 ? 'ef-m' : 'ef-l';
     const due = w.nextReview ? (w.nextReview <= today ? '<span style="color:var(--danger)">今日到期</span>' : w.nextReview) : (w.introduced ? '今日到期' : '未開始');
     return `<tr>
-      <td style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-weight:600">${w.de}</td>
-      <td>${w.zh}</td>
+      <td><span class="word-link" style="font-family:'IBM Plex Mono',monospace;color:var(--accent);font-weight:600" onclick="openWordDetail('${w.id}')">${w.de}</span></td>
+      <td><span class="word-link" onclick="openWordDetail('${w.id}')">${w.zh}</span></td>
       <td style="color:var(--muted)">${w.artikel || '—'}</td>
       <td><span class="${ec}">${ef.toFixed(2)}</span></td>
       <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${w.sm2_interval || 1}d</td>
       <td style="font-size:12px">${due}</td>
       <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted)">${w.totalReviews || 0}</td>
-      <td><button class="btn btn-danger" onclick="deleteWord('${w.id}')">刪除</button></td>
+      <td style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary" style="font-size:12px;padding:5px 12px" onclick="openWordDetail('${w.id}');setTimeout(startEditWord,0)">編輯</button><button class="btn btn-danger" onclick="deleteWord('${w.id}')">刪除</button></td>
     </tr>`;
   }).join('');
+}
+
+
+let _activeWordId = null;
+
+function escapeHTML(v) {
+  return String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+
+function renderWordDetail(w) {
+  document.getElementById('modal-de').innerHTML = `${escapeHTML(w.de)} ${w.artikel ? `<span class="wart">${escapeHTML(w.artikel)}</span>` : ''}`;
+  document.getElementById('modal-zh').textContent = w.zh;
+  const ef = w.sm2_ef || 2.5;
+  const due = w.nextReview || (w.introduced ? '今日到期' : '未開始');
+  document.getElementById('modal-grid').innerHTML = `
+    <div class="modal-cell"><div class="modal-label">冠詞</div><div class="modal-val">${escapeHTML(w.artikel || '—')}</div></div>
+    <div class="modal-cell"><div class="modal-label">詞性</div><div class="modal-val">${escapeHTML(w.pos || '—')}</div></div>
+    <div class="modal-cell"><div class="modal-label">EF</div><div class="modal-val">${ef.toFixed(2)}</div></div>
+    <div class="modal-cell"><div class="modal-label">間隔</div><div class="modal-val">${w.sm2_interval || 1} 天</div></div>
+    <div class="modal-cell"><div class="modal-label">下次複習</div><div class="modal-val">${escapeHTML(due)}</div></div>
+    <div class="modal-cell"><div class="modal-label">複習次數</div><div class="modal-val">${w.totalReviews || 0}</div></div>`;
+  const ex = [];
+  if (w.example) ex.push(`<div class="wex" style="font-size:14px;color:var(--text)">${escapeHTML(w.example)}</div>`);
+  if (w.exampleZh) ex.push(`<div class="wex">${escapeHTML(w.exampleZh)}</div>`);
+  document.getElementById('modal-example').innerHTML = ex.length ? ex.join('') : '<div class="wex">沒有例句。之後新增，別讓單字裸奔。</div>';
+}
+
+function openWordDetail(id) {
+  const w = _words.find(x => x.id === id);
+  if (!w) return;
+  _activeWordId = id;
+  document.getElementById('modal-view-area').classList.remove('hide');
+  document.getElementById('modal-edit-form').classList.remove('show');
+  renderWordDetail(w);
+  document.getElementById('word-modal').classList.add('show');
+}
+
+function startEditWord() {
+  const w = _words.find(x => x.id === _activeWordId);
+  if (!w) return;
+  document.getElementById('e-de').value = w.de || '';
+  document.getElementById('e-zh').value = w.zh || '';
+  document.getElementById('e-art').value = w.artikel || '';
+  document.getElementById('e-pos').value = w.pos || '';
+  document.getElementById('e-ex').value = w.example || '';
+  document.getElementById('e-exzh').value = w.exampleZh || '';
+  document.getElementById('modal-view-area').classList.add('hide');
+  document.getElementById('modal-edit-form').classList.add('show');
+}
+
+function cancelEditWord() {
+  document.getElementById('modal-edit-form').classList.remove('show');
+  document.getElementById('modal-view-area').classList.remove('hide');
+}
+
+function saveWordEdit() {
+  const w = _words.find(x => x.id === _activeWordId);
+  if (!w) return;
+  const de = document.getElementById('e-de').value.trim();
+  const zh = document.getElementById('e-zh').value.trim();
+  if (!de || !zh) { toast('德文和中文不能空白 ✗'); return; }
+  const duplicate = _words.find(x => x.id !== w.id && x.de.toLowerCase() === de.toLowerCase());
+  if (duplicate) { toast('這個德文單字已存在'); return; }
+  w.de = de;
+  w.zh = zh;
+  w.artikel = document.getElementById('e-art').value;
+  w.pos = document.getElementById('e-pos').value;
+  w.example = document.getElementById('e-ex').value.trim();
+  w.exampleZh = document.getElementById('e-exzh').value.trim();
+  w.updatedAt = new Date().toISOString();
+  scheduleSave();
+  renderList();
+  renderToday();
+  updateStats();
+  renderWordDetail(w);
+  cancelEditWord();
+  toast('單字已修改 ✓');
+}
+
+function closeWordDetail(e) {
+  if (e && e.target && e.target.id !== 'word-modal') return;
+  document.getElementById('word-modal').classList.remove('show');
+  document.getElementById('modal-edit-form').classList.remove('show');
+  document.getElementById('modal-view-area').classList.remove('hide');
 }
 
 function deleteWord(id) {
